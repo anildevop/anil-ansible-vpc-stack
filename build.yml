@@ -1,0 +1,52 @@
+- name: Update server
+  hosts: cntl
+  tasks:
+    - name: update server
+      apt:
+        update_cache: yes
+      register: update_out
+
+    - name: print update details
+      debug:
+        var: update_out
+    - name: Install  jdk, maven, git
+      apt:
+        name: "{{item}}"
+        state: present
+        update_cache: yes
+      loop:
+        - git
+        - openjdk-8-jdk
+        - maven
+      register: software_out
+
+    - debug:
+        var: software_out
+    
+    - name: clone git repo
+      git:
+        repo: https://github.com/anildevop/vprofile-project.git
+        dest: myproject
+        version: vp-rem
+      register: git_status
+
+    - name: mvn install command to build artifact
+      command: "mvn install"
+      args:
+        chdir: myproject
+      # when: git_status.changed
+      register: mvn_info
+
+    - name: Copy artifacts to files directory
+      copy:
+        src: "{{item}}"
+        dest: ../myproject/files/ROOT.war
+        #      remote_src: yes
+      with_fileglob: myproject/target/*.war
+
+
+    - name: Copy SQL file to files directory
+      copy:
+        src: ../myproject/src/main/resources/db_backup.sql
+        dest: ../myproject/files/db_backup.sql
+        # remote_src: yes
